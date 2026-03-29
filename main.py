@@ -1,10 +1,4 @@
 # main.py  —  RP2350-Touch-LCD-2 (MicroPython)
-# --------------------------------------------------
-# Uses a full 240x320 RGB565 framebuffer in RAM.
-# The entire screen is composed in the buffer and
-# flushed to the LCD in one SPI burst — no flicker,
-# no stripes, fast enough for a 300 ms refresh loop.
-# --------------------------------------------------
 import uasyncio as asyncio
 import machine
 import framebuf
@@ -17,28 +11,31 @@ from auto_controller import AutoController
 W = 240
 H = 320
 
-def _swap(c):
-    return ((c & 0xFF) << 8) | (c >> 8)
-
-BLACK  = _swap(0x0000)
-WHITE  = _swap(0xFFFF)
-GREEN  = _swap(0x07E0)
-BLUE   = _swap(0x001F)
-RED    = _swap(0xF800)
-ORANGE = _swap(0xFD20)
-CYAN   = _swap(0x07FF)
-GRAY   = _swap(0x7BEF)
-DGRAY  = _swap(0x2104)
+# framebuf.RGB565 is little-endian (byte-swapped vs the raw RGB565 values).
+# Pass raw RGB565 values directly — framebuf handles the byte order internally.
+BLACK  = 0x0000
+WHITE  = 0xFFFF
+GREEN  = 0x07E0
+BLUE   = 0x001F
+RED    = 0xF800
+ORANGE = 0xFD20
+CYAN   = 0x07FF
+GRAY   = 0x7BEF
+DGRAY  = 0x2104
 
 
 class Screen:
     def __init__(self, lcd):
         self._lcd = lcd
+        # Use GS_LSBFIRST (big-endian RGB565) so bytes go to LCD unchanged
         self._buf = bytearray(W * H * 2)
         self._fb  = framebuf.FrameBuffer(self._buf, W, H, framebuf.RGB565)
 
-    def fill(self, color):       self._fb.fill(color)
-    def text(self, s, x, y, c): self._fb.text(s, x, y, c)
+    def fill(self, color):
+        self._fb.fill(color)
+
+    def text(self, s, x, y, color):
+        self._fb.text(s, x, y, color)
 
     def rect(self, x, y, w, h, color, filled=False):
         if filled:
@@ -47,12 +44,21 @@ class Screen:
             self._fb.rect(x, y, w, h, color)
 
     def flush(self):
+        """Byte-swap every pixel then send to LCD."""
         lcd = self._lcd
+        # framebuf.RGB565 stores pixels little-endian; LCD needs big-endian.
+        # Swap bytes in-place before sending.
+        buf = self._buf
+        for i in range(0, len(buf), 2):
+            buf[i], buf[i+1] = buf[i+1], buf[i]
         lcd.set_windows(0, 0, W - 1, H - 1)
         lcd.dc(1)
         lcd.cs(0)
-        lcd.bus.write(self._buf)
+        lcd.bus.write(buf)
         lcd.cs(1)
+        # Swap back so framebuf colours stay correct next frame
+        for i in range(0, len(buf), 2):
+            buf[i], buf[i+1] = buf[i+1], buf[i]
 
 
 class Button:
@@ -149,8 +155,9 @@ class App:
         scr.text(f"Speed: {self._speed} %", 10, 110, WHITE)
         bar_w = int(self._speed * 2)
         scr.rect(10, 128, 200, 12, DGRAY, filled=True)
-        scr.rect(10, 128, bar_w, 12, CYAN, filled=True)
-        scr.rect(10, 128, 200, 12, GRAY,  filled=False)
+        if bar_w > 0:
+            scr.rect(10, 128, bar_w, 12, CYAN, filled=True)
+        scr.rect(10, 128, 200, 12, GRAY, filled=False)
         scr.text("- Spd +", 72, 152, ORANGE)
 
         for btn in self.buttons:

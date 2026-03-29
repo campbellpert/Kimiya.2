@@ -33,7 +33,7 @@ HEATER_PIN = 4       # PWM2 A
 # --------------------------------------------------
 # NOTE: MicroPython PWM uses frequency in Hz and
 #       duty cycle as 0–65535 (duty_u16).
-HEATER_PWM_FREQ = 1       # Hz — suits SSR heatpad
+HEATER_PWM_FREQ = 10      # Hz — RP2350 minimum is ~8 Hz; 10 Hz suits SSR/MOSFET heatpad
 MOTOR_PWM_FREQ  = 10000   # Hz — suits DC motor driver
 
 # --------------------------------------------------

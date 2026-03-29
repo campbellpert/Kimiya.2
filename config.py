@@ -2,21 +2,31 @@
 # --------------------------------------------------
 # GPIO Pins
 # --------------------------------------------------
-# Heater (PWM-capable, free on RP2350-Touch-LCD-2)
-HEATER_PIN = 28
+# Reserved by the board (do not use):
+#   GP15       — LCD backlight
+#   GP16       — LCD DC
+#   GP17       — LCD CS
+#   GP18       — LCD SCK  (SPI0)
+#   GP19       — LCD MOSI (SPI0)
+#   GP20       — LCD RST / touch RST
+#   GP12       — Touch I2C SDA
+#   GP13       — Touch I2C SCL
+#   GP29       — Touch IRQ
 
-# Motor (TB6612 or equivalent, all PWM/GPIO-capable)
-MOTOR_PWMA = 26
-MOTOR_AIN1 = 6
-MOTOR_AIN2 = 7
-MOTOR_STBY = 8
+# MAX31865 on SPI1 — GP26/27/28 are the valid SPI1 pins available on this board
+MAX31865_SCK  = 26   # SPI1 SCK
+MAX31865_MOSI = 27   # SPI1 MOSI (TX)
+MAX31865_MISO = 28   # SPI1 MISO (RX)
+MAX31865_CS   = 5    # Any free GPIO
 
-# MAX31865 on SPI1 — DO NOT use SPI0 (reserved for LCD on GP18/19)
-# Also avoid GP12/13 (touch I2C SDA/SCL), GP29 (touch IRQ), GP20 (touch/LCD RST)
-MAX31865_SCK  = 2
-MAX31865_MOSI = 3
-MAX31865_MISO = 4
-MAX31865_CS   = 5
+# Motor (TB6612 or equivalent — all free GPIOs, all PWM-capable)
+MOTOR_PWMA = 0       # PWM0 A
+MOTOR_AIN1 = 1
+MOTOR_AIN2 = 2
+MOTOR_STBY = 3
+
+# Heater — needs PWM, must not conflict with SPI1 or motor pins above
+HEATER_PIN = 4       # PWM2 A
 
 # --------------------------------------------------
 # PWM Settings

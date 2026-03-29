@@ -1,4 +1,10 @@
 # main.py  —  RP2350-Touch-LCD-2 (MicroPython)
+# --------------------------------------------------
+# Uses a full 240x320 RGB565 framebuffer in RAM.
+# The entire screen is composed in the buffer and
+# flushed to the LCD in one SPI burst — no flicker,
+# no stripes, fast enough for a 300 ms refresh loop.
+# --------------------------------------------------
 import uasyncio as asyncio
 import machine
 import framebuf
@@ -11,31 +17,29 @@ from auto_controller import AutoController
 W = 240
 H = 320
 
-# framebuf.RGB565 is little-endian (byte-swapped vs the raw RGB565 values).
-# Pass raw RGB565 values directly — framebuf handles the byte order internally.
-BLACK  = 0x0000
-WHITE  = 0xFFFF
-GREEN  = 0x07E0
-BLUE   = 0x001F
-RED    = 0xF800
-ORANGE = 0xFD20
-CYAN   = 0x07FF
-GRAY   = 0x7BEF
-DGRAY  = 0x2104
+def _swap(c):
+    return ((c & 0xFF) << 8) | (c >> 8)
+
+BLACK  = _swap(0x0000)
+WHITE  = _swap(0xFFFF)
+GREEN  = _swap(0x07E0)
+BLUE   = _swap(0x001F)
+RED    = _swap(0xF800)
+ORANGE = _swap(0xFD20)
+CYAN   = _swap(0x07FF)
+GRAY   = _swap(0x7BEF)
+DGRAY  = _swap(0x2104)
+DGREEN = _swap(0x0320)  # dark green — highlights the Auto button
 
 
 class Screen:
     def __init__(self, lcd):
         self._lcd = lcd
-        # Use GS_LSBFIRST (big-endian RGB565) so bytes go to LCD unchanged
         self._buf = bytearray(W * H * 2)
         self._fb  = framebuf.FrameBuffer(self._buf, W, H, framebuf.RGB565)
 
-    def fill(self, color):
-        self._fb.fill(color)
-
-    def text(self, s, x, y, color):
-        self._fb.text(s, x, y, color)
+    def fill(self, color):       self._fb.fill(color)
+    def text(self, s, x, y, c): self._fb.text(s, x, y, c)
 
     def rect(self, x, y, w, h, color, filled=False):
         if filled:
@@ -44,35 +48,28 @@ class Screen:
             self._fb.rect(x, y, w, h, color)
 
     def flush(self):
-        """Byte-swap every pixel then send to LCD."""
         lcd = self._lcd
-        # framebuf.RGB565 stores pixels little-endian; LCD needs big-endian.
-        # Swap bytes in-place before sending.
-        buf = self._buf
-        for i in range(0, len(buf), 2):
-            buf[i], buf[i+1] = buf[i+1], buf[i]
         lcd.set_windows(0, 0, W - 1, H - 1)
         lcd.dc(1)
         lcd.cs(0)
-        lcd.bus.write(buf)
+        lcd.bus.write(self._buf)
         lcd.cs(1)
-        # Swap back so framebuf colours stay correct next frame
-        for i in range(0, len(buf), 2):
-            buf[i], buf[i+1] = buf[i+1], buf[i]
 
 
 class Button:
-    def __init__(self, x, y, w, h, label, callback):
+    def __init__(self, x, y, w, h, label, callback, bg_color=None):
         self.x = x; self.y = y; self.w = w; self.h = h
-        self.label = label
+        self.label    = label
         self.callback = callback
+        self.bg_color = bg_color  # None = default DGRAY
 
     def hit(self, tx, ty):
         return self.x <= tx <= self.x + self.w and self.y <= ty <= self.y + self.h
 
     def draw(self, scr):
-        scr.rect(self.x, self.y, self.w, self.h, DGRAY, filled=True)
-        scr.rect(self.x, self.y, self.w, self.h, GRAY,  filled=False)
+        bg = self.bg_color if self.bg_color is not None else DGRAY
+        scr.rect(self.x, self.y, self.w, self.h, bg,   filled=True)
+        scr.rect(self.x, self.y, self.w, self.h, GRAY, filled=False)
         tx = self.x + (self.w - len(self.label) * 8) // 2
         ty = self.y + (self.h - 8) // 2
         scr.text(self.label, tx, ty, WHITE)
@@ -103,7 +100,7 @@ class App:
             Button(COL2,    200, BTN_W, BTN_H, "Reverse",   self._rev),
             Button(COL1,    246, BTN_W, BTN_H, "Stop",      self._stop_motor),
             Button(COL2,    246, BTN_W, BTN_H, "Heat ON",   self._toggle_heat),
-            Button(COL1,    292, BTN_W, BTN_H, "AutoStart", self._toggle_auto),
+            Button(10,      290, 220,   30,    "AutoStart", self._toggle_auto, DGREEN),
             Button(COL1,    154, 44,    30,    "Spd-",      self._spd_down),
             Button(COL2+56, 154, 44,    30,    "Spd+",      self._spd_up),
         ]
@@ -155,9 +152,8 @@ class App:
         scr.text(f"Speed: {self._speed} %", 10, 110, WHITE)
         bar_w = int(self._speed * 2)
         scr.rect(10, 128, 200, 12, DGRAY, filled=True)
-        if bar_w > 0:
-            scr.rect(10, 128, bar_w, 12, CYAN, filled=True)
-        scr.rect(10, 128, 200, 12, GRAY, filled=False)
+        scr.rect(10, 128, bar_w, 12, CYAN, filled=True)
+        scr.rect(10, 128, 200, 12, GRAY,  filled=False)
         scr.text("- Spd +", 72, 152, ORANGE)
 
         for btn in self.buttons:
@@ -169,7 +165,7 @@ class App:
         coords = self._touch.get_touch_xy()
         if coords is None:
             return
-        tx = W - coords[0]["x"]
+        tx = coords[0]["x"]
         ty = coords[0]["y"]
         for btn in self.buttons:
             if btn.hit(tx, ty):

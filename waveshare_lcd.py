@@ -61,7 +61,7 @@ class lcd_st7789:
         self.write_cmd(0x11)
         time.sleep_ms(120)
 
-        self.write_cmd(0x36);  self.write_data(0x08)
+        self.write_cmd(0x36);  self.write_data(0x48)  # MADCTL: mirror X
         self.write_cmd(0x3A);  self.write_data(0x05)
         self.write_cmd(0xF0);  self.write_data(0xC3)
         self.write_cmd(0xF0);  self.write_data(0x96)

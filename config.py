@@ -13,27 +13,35 @@
 #   GP13       — Touch I2C SCL
 #   GP29       — Touch IRQ
 
-# MAX31865 on SPI1 — GP26/27/28 are the valid SPI1 pins available on this board
-MAX31865_SCK  = 26   # SPI1 SCK
-MAX31865_MOSI = 27   # SPI1 MOSI (TX)
-MAX31865_MISO = 28   # SPI1 MISO (RX)
-MAX31865_CS   = 5    # Any free GPIO
+# MAX31865 on SPI1 — using pins actually exposed on the board header
+# GPIO10 = SPI1 SCK  (header pin 12)
+# GPIO11 = SPI1 MOSI (header pin 21)
+# GPIO8  = SPI1 MISO (header pin 26)
+# GPIO9  = CS        (header pin 27, any free GPIO)
+MAX31865_SCK  = 10
+MAX31865_MOSI = 11
+MAX31865_MISO = 8
+MAX31865_CS   = 9
 
-# Motor (TB6612 or equivalent — all free GPIOs, all PWM-capable)
-MOTOR_PWMA = 0       # PWM0 A
+# Motor — free GPIO pins on the header
+# GPIO0  = PWMA (header pin 10)
+# GPIO1  = AIN1 (header pin 8)
+# GPIO3  = AIN2 (header pin 9)
+# GPIO5  = STBY (header pin 19)
+MOTOR_PWMA = 0
 MOTOR_AIN1 = 1
-MOTOR_AIN2 = 2
-MOTOR_STBY = 3
+MOTOR_AIN2 = 3
+MOTOR_STBY = 5
 
-# Heater — needs PWM, must not conflict with SPI1 or motor pins above
-HEATER_PIN = 4       # PWM2 A
+# Heater PWM — GPIO4 (header pin 11 / pin 20)
+HEATER_PIN = 4
 
 # --------------------------------------------------
 # PWM Settings
 # --------------------------------------------------
 # NOTE: MicroPython PWM uses frequency in Hz and
 #       duty cycle as 0–65535 (duty_u16).
-HEATER_PWM_FREQ = 10      # Hz — RP2350 minimum is ~8 Hz; 10 Hz suits SSR/MOSFET heatpad
+HEATER_PWM_FREQ = 100     # Hz — safely above RP2350 PWM minimum; fine for MOSFET heatpad
 MOTOR_PWM_FREQ  = 10000   # Hz — suits DC motor driver
 
 # --------------------------------------------------

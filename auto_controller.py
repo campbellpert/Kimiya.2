@@ -50,6 +50,7 @@ class AutoController:
                 self.motor.forward(config.AUTO_PUMP_SPEED)
                 await asyncio.sleep(config.AUTO_PUMP_TIME)
                 self.motor.stop()
+                await asyncio.sleep(config.AUTO_PHASE_DELAY)  # settle before heating
 
                 if target is not None:
                     print(f"Heating {name} to {target} °C")
@@ -64,6 +65,7 @@ class AutoController:
                         await asyncio.sleep(0.2)
 
                     print(f"{name} reached target.")
+                    await asyncio.sleep(config.AUTO_PHASE_DELAY)  # hold before next chamber
 
         except asyncio.CancelledError:
             pass

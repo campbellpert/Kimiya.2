@@ -77,6 +77,7 @@ REF_RESISTOR = 430    # Rref on your MAX31865 board (usually 430 Ω for PT100)
 AUTO_ENABLED    = True
 AUTO_PUMP_SPEED = 80      # % (0–100)
 AUTO_PUMP_TIME  = 5       # seconds
+AUTO_PHASE_DELAY = 5      # seconds to wait after pumping and after reaching temp
 
 CHAMBER_SEQUENCE = [
     {"name": "Chamber 1", "target_temp": None},

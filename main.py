@@ -110,8 +110,13 @@ class App:
     def _fwd(self):        self.motor.forward(self._speed)
     def _rev(self):        self.motor.reverse(self._speed)
     def _stop_motor(self): self.motor.stop()
-    def _spd_down(self):   self._speed = max(0,   self._speed - 10)
-    def _spd_up(self):     self._speed = min(100, self._speed + 10)
+    def _spd_down(self):
+        self._speed = max(0, self._speed - 10)
+        self.motor.set_speed(self._speed)
+
+    def _spd_up(self):
+        self._speed = min(100, self._speed + 10)
+        self.motor.set_speed(self._speed)
 
     def _toggle_heat(self):
         if self._heat_on:
